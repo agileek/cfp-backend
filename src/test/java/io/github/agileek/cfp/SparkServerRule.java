@@ -1,6 +1,9 @@
 package io.github.agileek.cfp;
 
 import com.querydsl.sql.SQLTemplates;
+import com.querydsl.sql.dml.SQLInsertClause;
+import io.github.agileek.cfp.database.model.QProposal;
+import io.github.agileek.cfp.database.model.bean.BProposal;
 import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.sql.Connection;
@@ -15,8 +18,8 @@ import spark.Spark;
 
 public class SparkServerRule extends ExternalResource {
 
-    private App tested;
     private final AtomicInteger port = new AtomicInteger();
+    private App tested;
 
     private static boolean isPortAvailable(int port) {
         try {
@@ -76,10 +79,19 @@ public class SparkServerRule extends ExternalResource {
     }
 
     public Connection getConnection() throws Exception {
-        return tested.dataSource.getConnection();
+        return tested.sqlSetup.dataSource.getConnection();
     }
 
     public SQLTemplates getDialect() {
-        return tested.dialect;
+        return tested.sqlSetup.dialect;
+    }
+
+    public void insert(BProposal... bProposal) throws Exception {
+        try (Connection connection = getConnection()) {
+            for (BProposal proposal : bProposal) {
+                new SQLInsertClause(connection, getDialect(), QProposal.proposal).populate(proposal).execute();
+            }
+        }
+
     }
 }

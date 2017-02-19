@@ -2,11 +2,8 @@ package io.github.agileek.cfp;
 
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
-import com.querydsl.sql.dml.SQLInsertClause;
 import io.github.agileek.cfp.api.Proposal;
-import io.github.agileek.cfp.database.model.QProposal;
 import io.github.agileek.cfp.database.model.bean.BProposal;
-import java.sql.Connection;
 import java.util.List;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -35,18 +32,14 @@ public class AppTest {
         assertThat(getProposals(response)).isEmpty();
     }
 
-
     @Test
     public void shouldGetTheProposals_withRealValue() throws Exception {
-        try (Connection connection = withSparkServer.getConnection()) {
-            BProposal bProposal = new BProposal();
-            bProposal.setContent("Content");
-            new SQLInsertClause(connection, withSparkServer.getDialect(), QProposal.proposal).populate(bProposal).execute();
-        }
+        withSparkServer.insert(new BProposal("Content", "Subject"));
+
         Request request = withSparkServer.withRequestBuilder("proposal").build();
 
         Response response = new OkHttpClient().newCall(request).execute();
-        assertThat(getProposals(response)).hasSize(1).containsExactly(new Proposal("Content"));
+        assertThat(getProposals(response)).hasSize(1).containsExactly(new Proposal("Subject", "Content"));
     }
 
     private List<Proposal> getProposals(Response response) {
