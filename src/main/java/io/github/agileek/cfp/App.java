@@ -10,6 +10,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.pac4j.core.config.Config;
+import org.pac4j.sparkjava.SecurityFilter;
+import static spark.Spark.before;
 import static spark.Spark.get;
 
 public final class App {
@@ -23,12 +26,18 @@ public final class App {
     }
 
     public void configure() throws SQLException, ClassNotFoundException {
-        String url = System.getProperty("JDBC_URL", "jdbc:mysql://localhost:3306/cfp");
+        String url = System.getProperty("JDBC_URL", "jdbc:h2:file:./cfp;MODE=MYSQL;DATABASE_TO_UPPER=false;INIT=CREATE SCHEMA IF NOT EXISTS CFP");
         String user = System.getProperty("JDBC_USER", "cfp");
         String password = System.getProperty("JDBC_PASSWORD", "cfp");
 
         sqlSetup = new SQLSetup(url, user, password);
         Gson gson = new Gson();
+        final Config config = new AuthenticationConfigFactory().build();
+
+        SecurityFilter loginFilter = new SecurityFilter(config, "Google2Client,FacebookClient,TwitterClient", "*");
+        before("/*", loginFilter);
+        before("/proposal/:proposal/vote", new SecurityFilter(config, "*", "vote"));
+
         get("/hello", (req, res) -> "Hello World");
         get("/proposal", ((request, response) -> {
             try (Connection connection = sqlSetup.dataSource.getConnection()) {
