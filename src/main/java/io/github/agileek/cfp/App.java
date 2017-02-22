@@ -11,9 +11,13 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.pac4j.core.config.Config;
+import org.pac4j.core.profile.ProfileManager;
+import org.pac4j.sparkjava.CallbackRoute;
 import org.pac4j.sparkjava.SecurityFilter;
+import org.pac4j.sparkjava.SparkWebContext;
 import static spark.Spark.before;
 import static spark.Spark.get;
+import static spark.Spark.post;
 
 public final class App {
 
@@ -34,11 +38,18 @@ public final class App {
         Gson gson = new Gson();
         final Config config = new AuthenticationConfigFactory().build();
 
-        SecurityFilter loginFilter = new SecurityFilter(config, "Google2Client,FacebookClient,TwitterClient", "*");
-        before("/*", loginFilter);
+        SecurityFilter loginFilter = new SecurityFilter(config, "Google2Client,FacebookClient,TwitterClient");
+        final CallbackRoute callback = new CallbackRoute(config, null, true);
+        get("/callback", callback);
+        post("/callback", callback);
+        before("/hello", loginFilter);
         before("/proposal/:proposal/vote", new SecurityFilter(config, "*", "vote"));
 
-        get("/hello", (req, res) -> "Hello World");
+        get("/hello", (req, res) -> {
+            final SparkWebContext context = new SparkWebContext(req, res);
+            final ProfileManager manager = new ProfileManager(context);
+            return gson.toJson(manager.getAll(true));
+        });
         get("/proposal", ((request, response) -> {
             try (Connection connection = sqlSetup.dataSource.getConnection()) {
                 SQLQuery<Void> query = new SQLQuery<>(connection, sqlSetup.dialect);
