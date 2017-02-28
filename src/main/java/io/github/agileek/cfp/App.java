@@ -9,6 +9,7 @@ import io.github.agileek.cfp.database.model.bean.BProposal;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.pac4j.core.config.Config;
 import org.pac4j.core.profile.ProfileManager;
@@ -62,7 +63,7 @@ public final class App {
                 List<BProposal> contents = query.select(QProposal.proposal)
                         .from(QProposal.proposal)
                         .fetch();
-                return contents.stream().map(bProposal -> new Proposal(bProposal.getSubject(), bProposal.getContent())).collect(Collectors.toList());
+                return contents.stream().map(bProposal -> new Proposal(UUID.fromString(bProposal.getId()), bProposal.getSubject(), bProposal.getContent())).collect(Collectors.toList());
             }
         }), gson::toJson);
     }
