@@ -26,7 +26,19 @@ public final class App {
 
     public static void main(String[] args) throws Exception {
         App app = new App();
+        app.applySecurity();
         app.configure();
+    }
+
+    @VisibleForTesting
+    private void applySecurity() {
+        final Config config = new AuthenticationConfigFactory().build();
+        SecurityFilter loginFilter = new SecurityFilter(config, "Google2Client,FacebookClient,TwitterClient");
+        final CallbackRoute callback = new CallbackRoute(config, null, true);
+        before("/hello", loginFilter);
+        before("/proposal/:proposal/vote", new SecurityFilter(config, "*", "vote"));
+        get("/callback", callback);
+        post("/callback", callback);
     }
 
     public void configure() throws SQLException, ClassNotFoundException {
@@ -36,16 +48,10 @@ public final class App {
 
         sqlSetup = new SQLSetup(url, user, password);
         Gson gson = new Gson();
-        final Config config = new AuthenticationConfigFactory().build();
 
-        SecurityFilter loginFilter = new SecurityFilter(config, "Google2Client,FacebookClient,TwitterClient");
-        final CallbackRoute callback = new CallbackRoute(config, null, true);
-        get("/callback", callback);
-        post("/callback", callback);
-        before("/hello", loginFilter);
-        before("/proposal/:proposal/vote", new SecurityFilter(config, "*", "vote"));
+        get("/hello", (req, res) -> "Hello World");
 
-        get("/hello", (req, res) -> {
+        get("/test", (req, res) -> {
             final SparkWebContext context = new SparkWebContext(req, res);
             final ProfileManager manager = new ProfileManager(context);
             return gson.toJson(manager.getAll(true));
